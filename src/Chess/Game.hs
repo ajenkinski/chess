@@ -1,4 +1,12 @@
-module Chess.Game (Square(..), Coord, Element, Move(..), ChessGame, makeInitialGame)  where
+module Chess.Game (
+  Square(..),
+  Coord,
+  Element,
+  Move(..),
+  ChessGame,
+  makeInitialGame,
+  canCastleQueenSide,
+  canCastleKingSide)  where
 
 import qualified Data.Array as A
 import Data.Array ((//), (!))
@@ -19,6 +27,14 @@ type Board = A.Array Coord Square
 emptyBoard :: Board
 emptyBoard = A.listArray ((1, 1), (8, 8)) (repeat Empty)
 
+startRow :: Piece -> Int
+startRow piece =
+  case piece of
+    Piece Black Pawn -> 2
+    Piece White Pawn -> 7
+    Piece Black _ -> 1
+    Piece White _ -> 8
+
 -- Set a board square to a new value.
 setBoardSquare :: Board -> Coord -> Piece -> Board
 setBoardSquare board coord piece = board // [(coord, Square piece)]
@@ -30,6 +46,10 @@ setBoardSquares board assignments =
 boardRow :: Board -> Int -> [Element]
 boardRow board rowNum =
   [((rowNum, colNum), board!(rowNum, colNum)) | colNum <- [1..8]]
+
+boardSquare :: Board -> Coord -> Square
+boardSquare = (!)
+
 
 data ChessGame = ChessGame {
 
@@ -43,15 +63,19 @@ data ChessGame = ChessGame {
 }
 
 instance Show ChessGame where
-    show game = foldl1 (.) (map showRow [1..8]) rowSeparator
+    show game = showBoard (board game) (showString "Turn: " (show (nextPlayer game)))
         where rowSeparator = "+---+---+---+---+---+---+---+---+\n"
-              showRow r    =
-                  showString rowSeparator . showChar '|' .
-                  foldl1 (.) (map (showSquare.snd) (boardRow (board game) r)) .
-                  showChar '\n'
               showSquare (Square piece) =
                 showChar ' ' . showChar (pieceToChar piece) . showString " |"
               showSquare Empty = showString "   |"
+              showRow board r =
+                  showString rowSeparator . showChar '|' .
+                  foldl1 (.) (map (showSquare.snd) (boardRow board r)) .
+                  showChar '\n'
+              showBoard board = foldl1 (.) (map (showRow board) [1..8]) . showString rowSeparator
+
+squareAt :: ChessGame -> Coord -> Square
+squareAt = boardSquare . board
 
 initialPiecePositions = [
   -- black pieces
@@ -102,3 +126,21 @@ makeInitialGame startingPlayer =
     nextPlayer = startingPlayer,
     lastMoves = []
   }
+
+canCastle :: Int -> PieceColor -> ChessGame -> Bool
+canCastle rookColumn color game =
+  let king = Piece color King
+      rook = Piece color Rook
+      kingStart = (startRow king, 5)
+      rookStart = (startRow rook, rookColumn)
+      moveMatches piece1 from1 (Move piece2 from2 _) = (piece1, from1) == (piece2, from2)
+  in squareAt game kingStart == Square king &&
+     squareAt game rookStart == Square rook &&
+     not (any (moveMatches king kingStart) (lastMoves game)) &&
+     not (any (moveMatches rook rookStart) (lastMoves game))
+
+canCastleQueenSide :: PieceColor -> ChessGame -> Bool
+canCastleQueenSide = canCastle 1
+
+canCastleKingSide :: PieceColor -> ChessGame -> Bool
+canCastleKingSide = canCastle 8

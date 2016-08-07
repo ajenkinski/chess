@@ -7,4 +7,7 @@ main = do
   print Pawn
   print (Piece White Rook)
   print [Square (Piece White King), Square (Piece Black Queen), Empty]
-  print (makeInitialGame White)
+  let game = makeInitialGame White
+  print game
+  print (canCastleQueenSide White game)
+  print (canCastleKingSide Black game)
