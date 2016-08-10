@@ -1,146 +1,125 @@
+{- |
+This module defines a GameState data type which encapsulates the state of a
+chess game.
+-}
+
 module Chess.Game (
-  Square(..),
-  Coord,
-  Element,
   Move(..),
-  ChessGame,
-  makeInitialGame,
-  canCastleQueenSide,
-  canCastleKingSide)  where
+  CastlingType(..),
+  GameState,
+  squareAt,
+  nextPlayer,
+  lastMoves,
+  initialGame,
+  canCastle,
+  enPassantTarget,
+  halfMoveClock,
+  displayAsGrid)  where
 
 import qualified Data.Array as A
 import Data.Array ((//), (!))
 import Chess.Piece
+import Chess.Board
 
-data Square = Square Piece | Empty deriving (Show, Eq)
+-- | The type of castle move
+data CastlingType = KingSide | QueenSide deriving (Eq, Show)
 
-type Coord = (Int, Int)
-type Element = (Coord, Square)
-
+-- | Represents a move of a piece from one square to another.
 -- Move piece fromCoord toCoord
-data Move = Move Piece Coord Coord deriving (Show, Eq)
+data Move = Movement Piece Coord Coord
+          | DoublePawnMove Piece Coord Coord
+          | Capture Piece Coord Coord
+          | EnPassant Piece Coord Coord
+          | Promotion Piece Coord Coord PieceType
+          | Castling PieceColor CastlingType
+          deriving (Show, Eq)
 
--- A board is a 2D array of squares.  Black starts at the top (first row) and
--- White starts at the bottom.
-type Board = A.Array Coord Square
-
-emptyBoard :: Board
-emptyBoard = A.listArray ((1, 1), (8, 8)) (repeat Empty)
-
-startRow :: Piece -> Int
-startRow piece =
-  case piece of
-    Piece Black Pawn -> 2
-    Piece White Pawn -> 7
-    Piece Black _ -> 1
-    Piece White _ -> 8
-
--- Set a board square to a new value.
-setBoardSquare :: Board -> Coord -> Piece -> Board
-setBoardSquare board coord piece = board // [(coord, Square piece)]
-
-setBoardSquares :: Board -> [(Coord, Piece)] -> Board
-setBoardSquares board assignments =
-  board // [(coord, Square piece) | (coord, piece) <- assignments]
-
-boardRow :: Board -> Int -> [Element]
-boardRow board rowNum =
-  [((rowNum, colNum), board!(rowNum, colNum)) | colNum <- [1..8]]
-
-boardSquare :: Board -> Coord -> Square
-boardSquare = (!)
+-- | Returns a new board with a move applied to it, or Nothing if the move is
+-- not valid.  This function does not check whether the move is legal,
+-- it just checks that the 'from' and 'to' coordinates are in bounds, and that
+-- there is actually a piece on the 'from' square.
+applyMoveToBoard :: Board -> Move -> Maybe Board
+applyMoveToBoard board (Movement _ from to) = movePiece from to board
+applyMoveToBoard board (DoublePawnMove _ from to) = movePiece from to board
+applyMoveToBoard board (Capture _ from to) = movePiece from to board
+applyMoveToBoard board (EnPassant _ from@(x1, y1) to@(x2, y2)) =
+  movePiece from to (clearBoardSquare board (x1, y2))
+applyMoveToBoard board (Promotion (Piece color _) from to newType) = do
+  board' <- movePiece from to board
+  return (setBoardSquare board' to (Piece color newType))
+applyMoveToBoard board (Castling color QueenSide) = do
+  let row = startRow (Piece color King)
+  board' <- movePiece (row, 5) (row, 2) board
+  movePiece (row, 1) (row, 3) board'
+applyMoveToBoard board (Castling color KingSide) = do
+  let row = startRow (Piece color King)
+  board' <- movePiece (row, 5) (row, 7) board
+  movePiece (row, 8) (row, 6) board'
 
 
-data ChessGame = ChessGame {
-
+-- | Represents the state of a chess game.  This representation contains enough
+-- information to know what moves are legal at any given point.
+data GameState = GameState {
+  -- | The chess board
   board :: Board,
 
-  -- Whose turn is next
+  -- | Whose turn is next
   nextPlayer :: PieceColor,
 
-  -- Moves played so far, with most recent move at the head of the list
-  lastMoves :: [Move]
-}
+  -- | Moves played so far, with most recent move at the head of the list
+  lastMoves :: [Move],
 
-instance Show ChessGame where
-    show game = showBoard (board game) (showString "Turn: " (show (nextPlayer game)))
-        where rowSeparator = "+---+---+---+---+---+---+---+---+\n"
-              showSquare (Square piece) =
-                showChar ' ' . showChar (pieceToChar piece) . showString " |"
-              showSquare Empty = showString "   |"
-              showRow board r =
-                  showString rowSeparator . showChar '|' .
-                  foldl1 (.) (map (showSquare.snd) (boardRow board r)) .
-                  showChar '\n'
-              showBoard board = foldl1 (.) (map (showRow board) [1..8]) . showString rowSeparator
+  -- | En passant target square, or Nothing if there's no en passant target
+  -- square. If a pawn has just made a two-square move, this is the position
+  -- "behind" the pawn. This is recorded regardless of whether there is a pawn
+  -- in position to make an en passant capture.
+  enPassantTarget :: Maybe Coord,
 
-squareAt :: ChessGame -> Coord -> Square
+  -- | Castling moves possible for white
+  whiteCastlingTypes :: [CastlingType],
+
+  -- | Castling moves possible for black
+  blackCastlingTypes :: [CastlingType],
+
+  -- | Number of half moves since the last pawn move or capture
+  halfMoveClock :: Int
+} deriving (Eq, Show)
+
+-- | Displays a chess game as an ascii grid
+displayAsGrid :: GameState -> String
+displayAsGrid game = showBoard (board game) ""
+  where rowSeparator = "+---+---+---+---+---+---+---+---+\n"
+        showSquare (Square piece) =
+          showChar ' ' . showChar (pieceToChar piece) . showString " |"
+        showSquare Empty = showString "   |"
+        showRow board r =
+            showString rowSeparator . showChar '|' .
+            foldl1 (.) (map (showSquare.snd) (boardRow board r)) .
+            showChar '\n'
+        showBoard board = foldl1 (.) (map (showRow board) [1..8]) . showString rowSeparator
+
+-- | Return the contents of a square on the chess board
+squareAt :: GameState -> Coord -> Square
 squareAt = boardSquare . board
 
-initialPiecePositions = [
-  -- black pieces
-  ((1,1), Piece Black Rook),
-  ((1,2), Piece Black Knight),
-  ((1,3), Piece Black Bishop),
-  ((1,4), Piece Black Queen),
-  ((1,5), Piece Black King),
-  ((1,6), Piece Black Bishop),
-  ((1,7), Piece Black Knight),
-  ((1,8), Piece Black Rook),
-
-  -- black  pawns
-  ((2,1), Piece Black Pawn),
-  ((2,2), Piece Black Pawn),
-  ((2,3), Piece Black Pawn),
-  ((2,4), Piece Black Pawn),
-  ((2,5), Piece Black Pawn),
-  ((2,6), Piece Black Pawn),
-  ((2,7), Piece Black Pawn),
-  ((2,8), Piece Black Pawn),
-
-  -- white  pawns
-  ((7,1), Piece White Pawn),
-  ((7,2), Piece White Pawn),
-  ((7,3), Piece White Pawn),
-  ((7,4), Piece White Pawn),
-  ((7,5), Piece White Pawn),
-  ((7,6), Piece White Pawn),
-  ((7,7), Piece White Pawn),
-  ((7,8), Piece White Pawn),
-
-  -- white  pieces
-  ((8,1), Piece White Rook),
-  ((8,2), Piece White Knight),
-  ((8,3), Piece White Bishop),
-  ((8,4), Piece White Queen),
-  ((8,5), Piece White King),
-  ((8,6), Piece White Bishop),
-  ((8,7), Piece White Knight),
-  ((8,8), Piece White Rook)
-  ]
-
-makeInitialGame :: PieceColor -> ChessGame
-makeInitialGame startingPlayer =
-  ChessGame {
-    board = setBoardSquares emptyBoard initialPiecePositions,
+-- | Return a GameState with pieces setup in starting positions, and the
+-- nextPlayer set to the given starting player color
+initialGame :: PieceColor -> GameState
+initialGame startingPlayer =
+  GameState {
+    board = initialBoard,
     nextPlayer = startingPlayer,
-    lastMoves = []
+    lastMoves = [],
+    enPassantTarget = Nothing,
+    whiteCastlingTypes = [QueenSide, KingSide],
+    blackCastlingTypes = [QueenSide, KingSide],
+    halfMoveClock = 0
   }
 
-canCastle :: Int -> PieceColor -> ChessGame -> Bool
-canCastle rookColumn color game =
-  let king = Piece color King
-      rook = Piece color Rook
-      kingStart = (startRow king, 5)
-      rookStart = (startRow rook, rookColumn)
-      moveMatches piece1 from1 (Move piece2 from2 _) = (piece1, from1) == (piece2, from2)
-  in squareAt game kingStart == Square king &&
-     squareAt game rookStart == Square rook &&
-     not (any (moveMatches king kingStart) (lastMoves game)) &&
-     not (any (moveMatches rook rookStart) (lastMoves game))
-
-canCastleQueenSide :: PieceColor -> ChessGame -> Bool
-canCastleQueenSide = canCastle 1
-
-canCastleKingSide :: PieceColor -> ChessGame -> Bool
-canCastleKingSide = canCastle 8
+-- | Return true if king of the indicated color can still castle with the rook
+-- in the given side.
+canCastle :: GameState -> PieceColor -> CastlingType -> Bool
+canCastle game color castleType =
+  case color of
+    Black -> castleType `elem` blackCastlingTypes game
+    White -> castleType `elem` whiteCastlingTypes game
