@@ -13,8 +13,7 @@ module Chess.Game (
   initialGame,
   canCastle,
   enPassantTarget,
-  halfMoveClock,
-  displayAsGrid)  where
+  halfMoveClock)  where
 
 import qualified Data.Array as A
 import Data.Array ((//), (!))
@@ -84,19 +83,6 @@ data GameState = GameState {
   -- | Number of half moves since the last pawn move or capture
   halfMoveClock :: Int
 } deriving (Eq, Show)
-
--- | Displays a chess game as an ascii grid
-displayAsGrid :: GameState -> String
-displayAsGrid game = showBoard (board game) ""
-  where rowSeparator = "+---+---+---+---+---+---+---+---+\n"
-        showSquare (Square piece) =
-          showChar ' ' . showChar (pieceToChar piece) . showString " |"
-        showSquare Empty = showString "   |"
-        showRow board r =
-            showString rowSeparator . showChar '|' .
-            foldl1 (.) (map (showSquare.snd) (boardRow board r)) .
-            showChar '\n'
-        showBoard board = foldl1 (.) (map (showRow board) [1..8]) . showString rowSeparator
 
 -- | Return the contents of a square on the chess board
 squareAt :: GameState -> Coord -> Square
