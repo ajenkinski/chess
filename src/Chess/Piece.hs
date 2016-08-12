@@ -7,7 +7,9 @@ module Chess.Piece (
   PieceColor(..),
   Piece(..),
   opponent,
-  pieceToChar) where
+  pieceToChar,
+  charToPiece
+) where
 
 import qualified Data.Char
 
@@ -36,6 +38,12 @@ pieceToChar (Piece color ptype) =
     Black -> typeChar
     White -> Data.Char.toUpper typeChar
 
+charToPiece :: Char -> Maybe Piece
+charToPiece char = do
+  pieceType <- charToPieceType char
+  let color = if Data.Char.isUpper char then White else Black
+  return (Piece color pieceType)
+
 -- private module functions
 
 pieceTypeChar :: PieceType -> Char
@@ -47,3 +55,14 @@ pieceTypeChar ptype =
     Bishop -> 'b'
     King -> 'k'
     Queen -> 'q'
+
+charToPieceType :: Char -> Maybe PieceType
+charToPieceType char =
+  case Data.Char.toLower char of
+    'p' -> Just Pawn
+    'r' -> Just Rook
+    'n' -> Just Knight
+    'b' -> Just Bishop
+    'k' -> Just King
+    'q' -> Just Queen
+    _   -> Nothing

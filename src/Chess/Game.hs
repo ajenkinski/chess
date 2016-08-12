@@ -6,32 +6,41 @@ chess game.
 module Chess.Game (
   Move(..),
   CastlingType(..),
-  GameState,
-  squareAt,
-  nextPlayer,
-  lastMoves,
+  GameState(..),
   initialGame,
+  makeGame,
   canCastle,
-  enPassantTarget,
-  halfMoveClock)  where
+  module Chess.Board,
+  module Chess.Piece
+  )  where
 
 import qualified Data.Array as A
 import Data.Array ((//), (!))
 import Chess.Piece
 import Chess.Board
+import Data.Maybe
 
 -- | The type of castle move
 data CastlingType = KingSide | QueenSide deriving (Eq, Show)
 
 -- | Represents a move of a piece from one square to another.
--- Move piece fromCoord toCoord
-data Move = Movement Piece Coord Coord
-          | DoublePawnMove Piece Coord Coord
-          | Capture Piece Coord Coord
-          | EnPassant Piece Coord Coord
-          | Promotion Piece Coord Coord PieceType
-          | Castling PieceColor CastlingType
-          deriving (Show, Eq)
+-- All constructors other than 'Castling' have a pair of Coords giving the
+-- start and end squares
+data Move
+  -- | A move which doesn't fit in any of the other constructors
+  = Movement Piece Coord Coord
+  -- | A 2 square pawn move from the pawn's starting row
+  | DoublePawnMove Piece Coord Coord
+  -- | A capturing move other than an en passant or promotion move
+  | Capture Piece Coord Coord
+  -- | An en passant capture move.  Start and end coords are the for the
+  -- capturing pawn
+  | EnPassant Piece Coord Coord
+  -- | A pawn promotion move
+  | Promotion Piece Coord Coord PieceType
+  -- | A castle move
+  | Castling PieceColor CastlingType
+  deriving (Show, Eq)
 
 -- | Returns a new board with a move applied to it, or Nothing if the move is
 -- not valid.  This function does not check whether the move is legal,
@@ -60,10 +69,10 @@ applyMoveToBoard board (Castling color KingSide) = do
 -- information to know what moves are legal at any given point.
 data GameState = GameState {
   -- | The chess board
-  board :: Board,
+  gameBoard :: Board,
 
   -- | Whose turn is next
-  nextPlayer :: PieceColor,
+  currentPlayer :: PieceColor,
 
   -- | Moves played so far, with most recent move at the head of the list
   lastMoves :: [Move],
@@ -84,22 +93,30 @@ data GameState = GameState {
   halfMoveClock :: Int
 } deriving (Eq, Show)
 
--- | Return the contents of a square on the chess board
-squareAt :: GameState -> Coord -> Square
-squareAt = boardSquare . board
-
 -- | Return a GameState with pieces setup in starting positions, and the
--- nextPlayer set to the given starting player color
+-- currentPlayer set to the given starting player color
 initialGame :: PieceColor -> GameState
 initialGame startingPlayer =
   GameState {
-    board = initialBoard,
-    nextPlayer = startingPlayer,
+    gameBoard = initialBoard,
+    currentPlayer = startingPlayer,
     lastMoves = [],
     enPassantTarget = Nothing,
     whiteCastlingTypes = [QueenSide, KingSide],
     blackCastlingTypes = [QueenSide, KingSide],
     halfMoveClock = 0
+  }
+
+makeGame :: Board -> PieceColor -> [Move] -> Maybe Coord -> [CastlingType] -> [CastlingType] -> Int -> GameState
+makeGame board player history enPassant whiteCastling blackCastling halfMoves =
+  GameState {
+    gameBoard = board,
+    currentPlayer = player,
+    lastMoves = history,
+    enPassantTarget = enPassant,
+    whiteCastlingTypes = whiteCastling,
+    blackCastlingTypes = blackCastling,
+    halfMoveClock = halfMoves
   }
 
 -- | Return true if king of the indicated color can still castle with the rook
@@ -109,3 +126,40 @@ canCastle game color castleType =
   case color of
     Black -> castleType `elem` blackCastlingTypes game
     White -> castleType `elem` whiteCastlingTypes game
+
+-- | Return true if the given square contains an opponent piece of the current
+-- player other than a King
+hasKillablePiece :: GameState -> Coord -> Bool
+hasKillablePiece game coord =
+  case getPiece (gameBoard game) coord of
+    Just (Piece color ptype) -> color == opponent (currentPlayer game) && ptype /= King
+    Nothing -> False
+
+allLegalMoves :: GameState -> [Move]
+allLegalMoves game = []
+
+-- | Get all possible moves for the pawn at at a coordinate
+allPawnMoves :: GameState -> Coord -> [Move]
+allPawnMoves game from@(fromRow, fromCol) =
+  movement ++ enPassant ++ capture ++ promotion ++ capturePromotion
+  where board = gameBoard game
+        piece@(Piece color Pawn) = fromJust $ getPiece board from
+        direction = if color == Black then 1 else -1
+        toRow = fromRow + direction
+        moveCoord = (fromRow + direction, fromCol)
+        captureCoords = [(fromRow + direction, fromCol - 1),
+                         (fromRow + direction, fromCol + 1)]
+        canPromote = if color == Black then toRow == 8 else toRow == 1
+        movement = [Movement piece from moveCoord |
+                    isInBounds moveCoord && isSquareEmpty board moveCoord]
+        enPassant = [EnPassant piece from to | to <- captureCoords,
+                     enPassantTarget game == Just to]
+        capture = [Capture piece from to | to <- captureCoords,
+                   isInBounds to && hasKillablePiece game to]
+        promotion = [Promotion piece from moveCoord newType |
+                     newType <- [Queen, Bishop, Rook, Knight],
+                     canPromote && isSquareEmpty board moveCoord]
+        capturePromotion = [Promotion piece from to newType |
+                            to <- captureCoords,
+                            newType <- [Queen, Bishop, Rook, Knight],
+                            canPromote && hasKillablePiece game to]

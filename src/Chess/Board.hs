@@ -1,3 +1,5 @@
+-- | Defines a Board datatype representing a chess board
+
 module Chess.Board (
   Square(..),
   Coord,
@@ -5,6 +7,7 @@ module Chess.Board (
   Board,
   emptyBoard,
   initialBoard,
+  listBoard,
   startRow,
   setBoardSquare,
   setBoardSquares,
@@ -13,7 +16,8 @@ module Chess.Board (
   boardSquare,
   getPiece,
   isInBounds,
-  movePiece
+  movePiece,
+  isSquareEmpty
 ) where
 
 import qualified Data.Array as A
@@ -29,7 +33,7 @@ type Coord = (Int, Int)
 -- | Represents a particular square of a chess board
 type Element = (Coord, Square)
 
--- A board is a 2D array of squares.  Black starts at the top (first row) and
+-- | A board is a 2D array of squares.  Black starts at the top (first row) and
 -- White starts at the bottom.
 newtype Board = Board (A.Array Coord Square) deriving (Eq)
 
@@ -49,6 +53,7 @@ instance Show Board where
 emptyBoard :: Board
 emptyBoard = Board $ A.listArray ((1, 1), (8, 8)) (repeat Empty)
 
+-- | A chess board with pieces setup in the standard initial game positions
 initialBoard :: Board
 initialBoard = Board $ A.listArray ((1, 1), (8, 8)) squares
   where officerRow color = map (Square . Piece color) [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
@@ -58,6 +63,9 @@ initialBoard = Board $ A.listArray ((1, 1), (8, 8)) squares
                   replicate 32 Empty ++
                   pawnRow White ++
                   officerRow White
+
+listBoard :: [Square] -> Board
+listBoard squares = Board $ A.listArray ((1, 1), (8, 8)) squares
 
 -- | Returns the row number at which a chess piece starts the game
 startRow :: Piece -> Int
@@ -89,6 +97,9 @@ boardRow (Board board) rowNum =
 -- | Return the contents of a square of a board
 boardSquare :: Board -> Coord -> Square
 boardSquare (Board board) coord = board ! coord
+
+isSquareEmpty :: Board -> Coord -> Bool
+isSquareEmpty board coord = boardSquare board coord == Empty
 
 -- | Get the piece at a board square, if there is a piece on that square
 getPiece :: Board -> Coord -> Maybe Piece

@@ -45,22 +45,31 @@ build-type:          Simple
 -- Constraint on the version of Cabal needed to build this package.
 cabal-version:       >=1.10
 
+library
+  exposed-modules: Chess.Game, Chess.Piece, Chess.Board, Chess.FEN
+  build-depends:       base, array, text, split
+  hs-source-dirs: src
 
-executable chess
-  -- .hs or .lhs file containing the Main module.
+executable chess-test
   main-is:             Main.hs
 
   -- Modules included in this executable, other than Main.
-  other-modules: Chess.Game, Chess.Piece, Chess.Board
+  -- other-modules: 
 
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
 
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && <4.9, array >=0.5 && <0.6
+  build-depends: chess, base, array, text, split
 
   -- Directories containing source files.
   hs-source-dirs: src
 
   -- Base language which the package is written in.
   default-language:    Haskell2010
+
+test-suite chess-tests
+  type:  exitcode-stdio-1.0
+  hs-source-dirs: tests
+  main-is: Spec.hs
+  build-depends: chess, base, array, text, split, hspec
