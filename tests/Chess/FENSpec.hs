@@ -46,6 +46,24 @@ parseTestCases = [
       blackCastlingTypes = [KingSide, QueenSide],
       halfMoveClock = 0
    }
+  ),
+  ("K7/8/2n5/1n6/8/8/8/k6N w - - 0 1",
+   GameState {
+      gameBoard = listBoard [wk, em, em, em, em, em, em, em,
+                             em, em, em, em, em, em, em, em,
+                             em, em, bn, em, em, em, em, em,
+                             em, bn, em, em, em, em, em, em,
+                             em, em, em, em, em, em, em, em,
+                             em, em, em, em, em, em, em, em,
+                             em, em, em, em, em, em, em, em,
+                             bk, em, em, em, em, em, em, wn],
+      currentPlayer = White,
+      lastMoves = [],
+      enPassantTarget = Nothing,
+      whiteCastlingTypes = [],
+      blackCastlingTypes = [],
+      halfMoveClock = 0
+   }
   )
  ]
 

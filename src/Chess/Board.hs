@@ -7,6 +7,7 @@ module Chess.Board (
   Board,
   emptyBoard,
   initialBoard,
+  boardElements,
   listBoard,
   startRow,
   setBoardSquare,
@@ -17,7 +18,7 @@ module Chess.Board (
   getPiece,
   isInBounds,
   movePiece,
-  isSquareEmpty
+  isSquareEmpty,
 ) where
 
 import qualified Data.Array as A
@@ -66,6 +67,9 @@ initialBoard = Board $ A.listArray ((1, 1), (8, 8)) squares
 
 listBoard :: [Square] -> Board
 listBoard squares = Board $ A.listArray ((1, 1), (8, 8)) squares
+
+boardElements :: Board -> [Element]
+boardElements (Board board) = A.assocs board
 
 -- | Returns the row number at which a chess piece starts the game
 startRow :: Piece -> Int
