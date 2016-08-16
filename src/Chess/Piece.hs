@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric, DeriveAnyClass #-}
 {- |
 This module defines a chess piece data type, and associated functions
 -}
@@ -12,16 +13,19 @@ module Chess.Piece (
 ) where
 
 import qualified Data.Char
+import GHC.Generics (Generic)
+import Control.DeepSeq (NFData)
+
 
 -- | Represents the type of a chess piece
 data PieceType = Pawn | Rook | Knight | Bishop | King | Queen
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic, NFData)
 
 -- | Color of a chess piece
-data PieceColor = Black | White deriving (Show, Eq)
+data PieceColor = Black | White deriving (Show, Eq, Generic, NFData)
 
 -- | A chess piece
-data Piece = Piece PieceColor PieceType deriving (Show, Eq)
+data Piece = Piece PieceColor PieceType deriving (Show, Eq, Generic, NFData)
 
 
 -- | The opposing piece color

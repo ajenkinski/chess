@@ -22,7 +22,7 @@ synopsis:            Chess game implementation
 -- license:
 
 -- The file containing the license text.
-license-file:        LICENSE
+-- license-file:        LICENSE
 
 -- The package author(s).
 author:              Adam Jenkins
@@ -47,20 +47,23 @@ cabal-version:       >=1.10
 
 library
   exposed-modules: Chess.Game, Chess.Piece, Chess.Board, Chess.FEN
-  build-depends:       base, array, text, split
+  build-depends:       base, array, text, split, containers, deepseq
   hs-source-dirs: src
+  default-language:    Haskell2010
+  extensions: DeriveGeneric, DeriveAnyClass
+  ghc-options: -O -threaded
 
 executable chess-test
   main-is:             Main.hs
 
   -- Modules included in this executable, other than Main.
-  -- other-modules: 
+  -- other-modules:
 
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
 
   -- Other library packages from which modules are imported.
-  build-depends: chess, base, array, text, split
+  build-depends: chess, base, array, text, split, containers, deepseq
 
   -- Directories containing source files.
   hs-source-dirs: src
@@ -68,8 +71,31 @@ executable chess-test
   -- Base language which the package is written in.
   default-language:    Haskell2010
 
+  ghc-options: -O -threaded
+
+executable perft
+  main-is: perft.hs
+
+  -- Modules included in this executable, other than Main.
+  -- other-modules:
+
+  -- LANGUAGE extensions used by modules in this package.
+  -- other-extensions:
+
+  -- Other library packages from which modules are imported.
+  build-depends: chess, base, array, text, split, containers, parallel, deepseq
+
+  -- Directories containing source files.
+  hs-source-dirs: tests
+
+  -- Base language which the package is written in.
+  default-language: Haskell2010
+  ghc-options: -O -threaded
+
+
 test-suite chess-tests
   type:  exitcode-stdio-1.0
   hs-source-dirs: tests
   main-is: Spec.hs
-  build-depends: chess, base, array, text, split, hspec
+  build-depends: chess, base, array, text, split, containers, hspec
+  ghc-options: -O -threaded

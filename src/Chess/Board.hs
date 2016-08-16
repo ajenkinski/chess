@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric, DeriveAnyClass #-}
 -- | Defines a Board datatype representing a chess board
 
 module Chess.Board (
@@ -23,10 +24,13 @@ module Chess.Board (
 
 import qualified Data.Array as A
 import Data.Array ((//), (!))
+import GHC.Generics (Generic)
+import Control.DeepSeq (NFData)
+
 import Chess.Piece
 
 -- | Represents the contents of one square of a chess board
-data Square = Square Piece | Empty deriving (Show, Eq)
+data Square = Square Piece | Empty deriving (Show, Eq, Generic, NFData)
 
 -- | (Row, Column) coordinate of a chess board square.  Range is from 1 to 8.
 type Coord = (Int, Int)
@@ -36,7 +40,7 @@ type Element = (Coord, Square)
 
 -- | A board is a 2D array of squares.  Black starts at the top (first row) and
 -- White starts at the bottom.
-newtype Board = Board (A.Array Coord Square) deriving (Eq)
+newtype Board = Board (A.Array Coord Square) deriving (Eq, Generic, NFData)
 
 instance Show Board where
   show board = showChar '\n' . showBoard board $ ""
