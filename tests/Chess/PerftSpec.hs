@@ -21,13 +21,16 @@ perftList depth start =
   let tree = gameTree start
   in take depth [length level | level <- tail (levels tree)]
 
+testPerft :: Int -> (String, [Int]) -> Spec
 testPerft maxDepth (fen, expectedDepthCounts) =
+  -- filter out expected counts greater than 100 million because my engine is too slow
   describe ("Perft test for \"" ++ fen ++ "\"") $ do
     let start = parseFEN fen
     let depthCounts = perftList maxDepth start
-    forM_ (zip3 [1..] depthCounts expectedDepthCounts) $ \(depth, actualCount, expectedCount) ->
+    let filteredExpectedCounts = takeWhile (<= 100000000) expectedDepthCounts
+    forM_ (zip3 [1..] depthCounts filteredExpectedCounts) $ \(depth, actualCount, expectedCount) ->
       it ("Count for depth " ++ show depth ++ " should be " ++ show expectedCount) $
         actualCount `shouldBe` expectedCount
 
 spec :: Spec
-spec = mapM_ (testPerft 5) perftSuite
+spec = mapM_ (testPerft 6) perftSuite

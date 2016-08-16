@@ -50,10 +50,11 @@ main = do
   SIO.hSetBuffering SIO.stdout SIO.NoBuffering
   let depth = 6
   let start1 = parseFEN "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
-  let start2 = fromJust $ makeMove start1 (Movement (Piece White Rook) (8, 1) (8, 2))
-  let start3 = fromJust $ makeMove start2 (Capture (Piece Black Pawn) (6, 8) (7, 7))
-  let start4 = fromJust $ makeMove start3 (Movement (Piece White Pawn) (7, 1) (6, 1))
+  let start2 = fromJust $ makeMove start1 (Capture (Piece White Knight) (4, 5) (2, 6))
+  let start3 = fromJust $ makeMove start2 (Movement (Piece Black Bishop) (3, 1) (4, 2))
+  let start4 = fromJust $ makeMove start3 (Capture (Piece White Knight) (2, 6) (1, 8))
   printPerfList 4 start1
+  -- printDivide 1 start4
   -- let start2 = fromJust $ makeMove start1 (DoublePawnMove (Piece White Pawn) (7,1) (5,1))
   -- let start3 = fromJust $ makeMove start2 (Movement (Piece Black Pawn) (2,4) (3,4))
   -- let start4 = fromJust $ makeMove start3 (Movement (Piece White Pawn) (5,1) (4,1))

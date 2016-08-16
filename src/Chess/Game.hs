@@ -171,16 +171,17 @@ makeMove game move =
         DoublePawnMove (Piece White Pawn) (fromRow, fromCol) _ -> Just (fromRow - 1, fromCol)
         _ -> Nothing
     updateCastling castling =
+      let rookRow = startRow (Piece (currentPlayer game) Rook) in
       case move of
         Castling _ _ -> []
         Movement (Piece _ King) _ _ -> []
-        Movement piece@(Piece _ Rook) (fromRow, fromCol) _ | fromRow == startRow piece && fromCol == 1 ->
+        Movement (Piece _ Rook) (fromRow, fromCol) _ | fromRow == rookRow && fromCol == 1 ->
           delete QueenSide castling
-        Movement piece@(Piece _ Rook) (fromRow, fromCol) _ | fromRow == startRow piece && fromCol == 8 ->
+        Movement (Piece _ Rook) (fromRow, fromCol) _ | fromRow == rookRow && fromCol == 8 ->
           delete KingSide castling
-        Capture piece@(Piece _ Rook) (fromRow, fromCol) _ | fromRow == startRow piece && fromCol == 1 ->
+        Capture (Piece _ Rook) (fromRow, fromCol) _ | fromRow == rookRow && fromCol == 1 ->
           delete QueenSide castling
-        Capture piece@(Piece _ Rook) (fromRow, fromCol) _ | fromRow == startRow piece && fromCol == 8 ->
+        Capture (Piece _ Rook) (fromRow, fromCol) _ | fromRow == rookRow && fromCol == 8 ->
           delete KingSide castling
         _ -> castling
     whiteCastling =
@@ -202,9 +203,13 @@ makeMove game move =
 -- in the given side.
 canCastle :: GameState -> PieceColor -> CastlingType -> Bool
 canCastle game color castleType =
+  let rookColumn = case castleType of { QueenSide -> 1; KingSide -> 8 }
+      rookRow = case color of { Black -> 1; White -> 8 }
+      rookPresent = getPiece (gameBoard game) (rookRow, rookColumn) == Just (Piece color Rook)
+  in
   case color of
-    Black -> castleType `elem` blackCastlingTypes game
-    White -> castleType `elem` whiteCastlingTypes game
+    Black -> castleType `elem` blackCastlingTypes game && rookPresent
+    White -> castleType `elem` whiteCastlingTypes game && rookPresent
 
 -- | Return true if the given square contains an opponent piece of the current
 -- player other than a King
@@ -333,7 +338,7 @@ allPawnMoves game from@(fromRow, fromCol) =
         enPassant = [EnPassant piece from to | to <- captureCoords,
                      enPassantTarget game == Just to]
         capture = [Capture piece from to | to <- captureCoords,
-                   isInBounds to && hasOpponentPiece game to]
+                   not canPromote && isInBounds to && hasOpponentPiece game to]
         promotion = [Promotion piece from moveCoord newType |
                      newType <- [Queen, Bishop, Rook, Knight],
                      canPromote && isSquareEmpty board moveCoord]

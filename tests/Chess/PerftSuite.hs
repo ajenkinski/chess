@@ -1,5 +1,17 @@
 module Chess.PerftSuite where
 
+{-
+Each tuple in this list represents a test for the move generator.  The first element is a FEN string representing a
+start position.  The second element is a list of the counts of the expected number of moves at each search depth.
+For example:
+  ("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", [20, 400, 8902, 197281, 4865609, 119060324])
+This is saying, create an initial board fro the FEN string.  Then, there should be 20 legal moves from there, then
+400 moves at depth 2, 8902 moves at depth 3, etc.
+
+This data came from a test file included with the ROCE chess engine: http://www.rocechess.ch/rocee.html
+I've used the ROC engine as a reference for debugging my engine.  If a test fails, the perft and divide functions
+in ROC can be used to drill down and find where the move generators differ.
+-}
 perftSuite :: [(String, [Int])]
 perftSuite = [
   ("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", [20, 400, 8902, 197281, 4865609, 119060324]),
