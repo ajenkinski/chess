@@ -14,8 +14,8 @@ module Chess.Game (
   makeMove,
   allLegalMoves,
   moveToStdStr,
-  isLegalMove, inCheck, inCheckAfterMove, movesThroughCheck, isKingCaptureMove,
-  allPotentialMoves, allPawnMoves, allRookMoves, allKnightMoves, allBishopMoves, allQueenMoves, allKingMoves,
+  isLegalMove,
+  inCheck,
   module Chess.Board,
   module Chess.Piece
   )  where
