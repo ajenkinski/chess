@@ -1,3 +1,4 @@
+{- hspec test suite which runs perft tests -}
 module Chess.PerftSpec (spec) where
 
 import Test.Hspec
