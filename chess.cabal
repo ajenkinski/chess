@@ -45,13 +45,24 @@ build-type:          Simple
 -- Constraint on the version of Cabal needed to build this package.
 cabal-version:       >=1.10
 
+
+
+Flag MemProfiling
+  Description: Enable memory profiling
+  Default: True
+  Manual: True
+
 library
   exposed-modules: Chess.Game, Chess.Piece, Chess.Board, Chess.FEN
-  build-depends:       base, array, text, split, containers, deepseq
+  build-depends: base, array, text, split, containers, deepseq, parallel
   hs-source-dirs: src
   default-language:    Haskell2010
-  extensions: DeriveGeneric, DeriveAnyClass
   ghc-options: -O -threaded
+  extensions: DeriveGeneric, DeriveAnyClass
+  if flag(MemProfiling)
+    ghc-options:
+      -fprof-auto
+      "-with-rtsopts=-hd"
 
 executable chess-test
   main-is:             Main.hs
@@ -63,7 +74,7 @@ executable chess-test
   -- other-extensions:
 
   -- Other library packages from which modules are imported.
-  build-depends: chess, base, array, text, split, containers, deepseq
+  build-depends: chess, base, array, text, split, containers, deepseq, parallel
 
   -- Directories containing source files.
   hs-source-dirs: src
@@ -72,6 +83,13 @@ executable chess-test
   default-language:    Haskell2010
 
   ghc-options: -O -threaded
+
+  if flag(MemProfiling)
+    ghc-options:
+      -fprof-auto
+      "-with-rtsopts=-h"
+
+
 
 executable perft
   main-is: perft.hs
@@ -97,5 +115,11 @@ test-suite chess-tests
   type:  exitcode-stdio-1.0
   hs-source-dirs: tests
   main-is: Spec.hs
-  build-depends: chess, base, array, text, split, containers, hspec
+  build-depends: chess, base, array, text, split, containers, hspec, parallel
   ghc-options: -O -threaded
+  if flag(MemProfiling)
+    ghc-options:
+      -fprof-auto
+      "-with-rtsopts=-hd"
+
+

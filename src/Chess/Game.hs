@@ -15,7 +15,7 @@ module Chess.Game (
   allLegalMoves,
   moveToStdStr,
   isLegalMove,
-  inCheck,
+  playerInCheck, inCheck, inCheckMate,
   module Chess.Board,
   module Chess.Piece
   )  where
@@ -48,12 +48,13 @@ data Move
   -- | An en passant capture move.  Start and end coords are the for the
   -- capturing pawn
   | EnPassant Piece Coord Coord
-  -- | A pawn promotion move
-  | Promotion Piece Coord Coord PieceType
+  -- | A pawn promotion move. The bool is True if this is also a capture
+  | Promotion Piece Coord Coord PieceType Bool
   -- | A castle move
   | Castling PieceColor CastlingType
   deriving (Show, Eq, Generic, NFData)
 
+-- | Convert a move to a standard unabbreviated string representation
 moveToStdStr :: Move -> String
 moveToStdStr move =
   case move of
@@ -61,7 +62,7 @@ moveToStdStr move =
     DoublePawnMove _ from to -> moveStr from to
     Capture _ from to -> moveStr from to
     EnPassant _ from to -> moveStr from to
-    Promotion _ from to toType -> moveStr from to ++ [pieceToChar (Piece White toType)]
+    Promotion _ from to toType _ -> moveStr from to ++ [pieceToChar (Piece White toType)]
     Castling color QueenSide ->
       let row = startRow (Piece color King)
       in moveStr (row, 5) (row, 3)
@@ -79,22 +80,24 @@ moveToStdStr move =
 -- it just checks that the 'from' and 'to' coordinates are in bounds, and that
 -- there is actually a piece on the 'from' square.
 applyMoveToBoard :: Board -> Move -> Maybe Board
-applyMoveToBoard board (Movement _ from to) = movePiece from to board
-applyMoveToBoard board (DoublePawnMove _ from to) = movePiece from to board
-applyMoveToBoard board (Capture _ from to) = movePiece from to board
-applyMoveToBoard board (EnPassant _ from@(x1, y1) to@(x2, y2)) =
-  movePiece from to (clearBoardSquare board (x1, y2))
-applyMoveToBoard board (Promotion (Piece color _) from to newType) = do
-  board' <- movePiece from to board
-  return (setBoardSquare board' to (Piece color newType))
-applyMoveToBoard board (Castling color QueenSide) = do
-  let row = startRow (Piece color King)
-  board' <- movePiece (row, 5) (row, 3) board
-  movePiece (row, 1) (row, 4) board'
-applyMoveToBoard board (Castling color KingSide) = do
-  let row = startRow (Piece color King)
-  board' <- movePiece (row, 5) (row, 7) board
-  movePiece (row, 8) (row, 6) board'
+applyMoveToBoard board move =
+  case move of
+    Movement _ from to -> movePiece from to board
+    DoublePawnMove _ from to -> movePiece from to board
+    Capture _ from to -> movePiece from to board
+    EnPassant _ from@(x1, y1) to@(x2, y2) ->
+      movePiece from to (clearBoardSquare board (x1, y2))
+    Promotion (Piece color _) from to newType _ -> do
+      board' <- movePiece from to board
+      return (setBoardSquare board' to (Piece color newType))
+    Castling color QueenSide -> do
+      let row = startRow (Piece color King)
+      board' <- movePiece (row, 5) (row, 3) board
+      movePiece (row, 1) (row, 4) board'
+    Castling color KingSide -> do
+      let row = startRow (Piece color King)
+      board' <- movePiece (row, 5) (row, 7) board
+      movePiece (row, 8) (row, 6) board'
 
 -- | Represents the state of a chess game.  This representation contains enough
 -- information to know what moves are legal at any given point.
@@ -129,25 +132,25 @@ data GameState = GameState {
 initialGame :: PieceColor -> GameState
 initialGame startingPlayer =
   GameState {
-    gameBoard = initialBoard,
-    currentPlayer = startingPlayer,
-    lastMoves = [],
-    enPassantTarget = Nothing,
+    gameBoard          = initialBoard,
+    currentPlayer      = startingPlayer,
+    lastMoves          = [],
+    enPassantTarget    = Nothing,
     whiteCastlingTypes = [QueenSide, KingSide],
     blackCastlingTypes = [QueenSide, KingSide],
-    halfMoveClock = 0
+    halfMoveClock      = 0
   }
 
 makeGame :: Board -> PieceColor -> [Move] -> Maybe Coord -> [CastlingType] -> [CastlingType] -> Int -> GameState
 makeGame board player history enPassant whiteCastling blackCastling halfMoves =
   GameState {
-    gameBoard = board,
-    currentPlayer = player,
-    lastMoves = history,
-    enPassantTarget = enPassant,
+    gameBoard          = board,
+    currentPlayer      = player,
+    lastMoves          = history,
+    enPassantTarget    = enPassant,
     whiteCastlingTypes = whiteCastling,
     blackCastlingTypes = blackCastling,
-    halfMoveClock = halfMoves
+    halfMoveClock      = halfMoves
   }
 
 -- | Return a new GameState with move applied. Returns Nothing if there is no piece on the start square, or
@@ -156,13 +159,13 @@ makeMove :: GameState -> Move -> Maybe GameState
 makeMove game move =
   do newBoard <- applyMoveToBoard (gameBoard game) move
      return GameState {
-               gameBoard = newBoard,
-               currentPlayer = opponent (currentPlayer game),
-               lastMoves = move : lastMoves game,
-               enPassantTarget = enPassant,
+               gameBoard          = newBoard,
+               currentPlayer      = opponent (currentPlayer game),
+               lastMoves          = move : lastMoves game,
+               enPassantTarget    = enPassant,
                whiteCastlingTypes = whiteCastling,
                blackCastlingTypes = blackCastling,
-               halfMoveClock = halfMoves
+               halfMoveClock      = halfMoves
             }
   where
     enPassant =
@@ -195,7 +198,7 @@ makeMove game move =
     halfMoves =
       case move of
         Movement (Piece _ ptype) _ _ | ptype /= Pawn -> halfMoveClock game + 1
-        Castling _ _ -> halfMoveClock game + 1
+        Castling _ _                                 -> halfMoveClock game + 1
         _ -> 0
 
 
@@ -203,8 +206,8 @@ makeMove game move =
 -- in the given side.
 canCastle :: GameState -> PieceColor -> CastlingType -> Bool
 canCastle game color castleType =
-  let rookColumn = case castleType of { QueenSide -> 1; KingSide -> 8 }
-      rookRow = case color of { Black -> 1; White -> 8 }
+  let rookColumn  = case castleType of { QueenSide -> 1; KingSide -> 8 }
+      rookRow     = case color of { Black -> 1; White -> 8 }
       rookPresent = getPiece (gameBoard game) (rookRow, rookColumn) == Just (Piece color Rook)
   in
   case color of
@@ -226,19 +229,29 @@ isKingCaptureMove game move =
       board = gameBoard game
   in
   case move of
-    Capture _ _ to -> getPiece board to == Just (Piece enemy King)
-    Promotion _ _ to _ -> getPiece board to == Just (Piece enemy King)
-    _ -> False
+    Capture _ _ to          -> getPiece board to == Just (Piece enemy King)
+    Promotion _ _ to _ True -> getPiece board to == Just (Piece enemy King)
+    _                       -> False
 
 -- | Returns True if the given player is in check
-inCheck :: GameState -> PieceColor -> Bool
-inCheck game player =
+playerInCheck :: GameState -> PieceColor -> Bool
+playerInCheck game player =
   let game' = game { currentPlayer = opponent player }
   in any (isKingCaptureMove game') (allPotentialMoves game')
 
+-- | True if the current player is in check
+inCheck :: GameState -> Bool
+inCheck game = playerInCheck game (currentPlayer game)
+
 -- | Returns true if the current player would be in check after making move
 inCheckAfterMove :: GameState -> Move -> Bool
-inCheckAfterMove game move = inCheck (fromJust $ makeMove game move) (currentPlayer game)
+inCheckAfterMove game move = playerInCheck (fromJust $ makeMove game move) (currentPlayer game)
+
+inCheckMate :: GameState -> Bool
+inCheckMate game = playerInCheck game (currentPlayer game) && null (allLegalMoves game)
+
+inStalemate :: GameState -> Bool
+inStalemate game = not (playerInCheck game (currentPlayer game)) && null (allLegalMoves game)
 
 -- | Returns true if move is a castling move which moves through check
 movesThroughCheck :: GameState -> Move -> Bool
@@ -248,8 +261,8 @@ movesThroughCheck game move =
       let kingRow = startRow (Piece color King)
           squaretoCheck = case castlingType of
             QueenSide -> (kingRow, 4)
-            KingSide -> (kingRow, 6)
-      in inCheck game color || inCheckAfterMove game (Movement (Piece color King) (kingRow, 5) squaretoCheck)
+            KingSide  -> (kingRow, 6)
+      in playerInCheck game color || inCheckAfterMove game (Movement (Piece color King) (kingRow, 5) squaretoCheck)
     _ -> False
 
 isLegalMove :: GameState -> Move -> Bool
@@ -278,12 +291,12 @@ allPotentialMoves game = concatMap movesForSquare (boardElements (gameBoard game
         Square (Piece color _) | color /= currentPlayer game -> []
         Square (Piece _ ptype) ->
           case ptype of
-            Pawn -> allPawnMoves game coord
-            Rook -> allRookMoves game coord
+            Pawn   -> allPawnMoves game coord
+            Rook   -> allRookMoves game coord
             Knight -> allKnightMoves game coord
             Bishop -> allBishopMoves game coord
-            King -> allKingMoves game coord
-            Queen -> allQueenMoves game coord
+            King   -> allKingMoves game coord
+            Queen  -> allQueenMoves game coord
 
 sumSquares :: Coord -> Coord -> Coord
 sumSquares (r1, c1) (r2, c2) = (r1 + r2, c1 + c2)
@@ -298,9 +311,9 @@ maybeMoveInDirection game piece from direction =
   if not (isInBounds to) then Nothing
   else
     case boardSquare (gameBoard game) to of
-      Empty -> Just (Movement piece from to)
+      Empty                               -> Just (Movement piece from to)
       Square _ | hasOpponentPiece game to -> Just (Capture piece from to)
-      _ -> Nothing
+      _                                   -> Nothing
 
 -- | Repeatedly applies maybeMoveInDirection until encountering the board edge, a capture, or a
 -- friendly piece, and returns the list of moves along the way.
@@ -339,10 +352,10 @@ allPawnMoves game from@(fromRow, fromCol) =
                      enPassantTarget game == Just to]
         capture = [Capture piece from to | to <- captureCoords,
                    not canPromote && isInBounds to && hasOpponentPiece game to]
-        promotion = [Promotion piece from moveCoord newType |
+        promotion = [Promotion piece from moveCoord newType False |
                      newType <- [Queen, Bishop, Rook, Knight],
                      canPromote && isSquareEmpty board moveCoord]
-        capturePromotion = [Promotion piece from to newType |
+        capturePromotion = [Promotion piece from to newType True |
                             to <- captureCoords,
                             newType <- [Queen, Bishop, Rook, Knight],
                             canPromote && isInBounds to && hasOpponentPiece game to]
