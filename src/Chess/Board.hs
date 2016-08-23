@@ -81,8 +81,8 @@ startRow piece =
   case piece of
     Piece Black Pawn -> 2
     Piece White Pawn -> 7
-    Piece Black _ -> 1
-    Piece White _ -> 8
+    Piece Black _    -> 1
+    Piece White _    -> 8
 
 -- | Place a piece on a board square
 setBoardSquare :: Board -> Coord -> Piece -> Board
@@ -113,7 +113,7 @@ isSquareEmpty board coord = boardSquare board coord == Empty
 getPiece :: Board -> Coord -> Maybe Piece
 getPiece board coord =
   case boardSquare board coord of
-    Empty -> Nothing
+    Empty        -> Nothing
     Square piece -> Just piece
 
 -- | True if a coordinate is in bounds of the board

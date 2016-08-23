@@ -53,12 +53,12 @@ charToPiece char = do
 pieceTypeChar :: PieceType -> Char
 pieceTypeChar ptype =
   case ptype of
-    Pawn -> 'p'
-    Rook -> 'r'
+    Pawn   -> 'p'
+    Rook   -> 'r'
     Knight -> 'n'
     Bishop -> 'b'
-    King -> 'k'
-    Queen -> 'q'
+    King   -> 'k'
+    Queen  -> 'q'
 
 charToPieceType :: Char -> Maybe PieceType
 charToPieceType char =

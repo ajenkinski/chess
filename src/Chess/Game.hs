@@ -58,10 +58,10 @@ data Move
 moveToStdStr :: Move -> String
 moveToStdStr move =
   case move of
-    Movement _ from to -> moveStr from to
-    DoublePawnMove _ from to -> moveStr from to
-    Capture _ from to -> moveStr from to
-    EnPassant _ from to -> moveStr from to
+    Movement _ from to           -> moveStr from to
+    DoublePawnMove _ from to     -> moveStr from to
+    Capture _ from to            -> moveStr from to
+    EnPassant _ from to          -> moveStr from to
     Promotion _ from to toType _ -> moveStr from to ++ [pieceToChar (Piece White toType)]
     Castling color QueenSide ->
       let row = startRow (Piece color King)
@@ -82,9 +82,9 @@ moveToStdStr move =
 applyMoveToBoard :: Board -> Move -> Maybe Board
 applyMoveToBoard board move =
   case move of
-    Movement _ from to -> movePiece from to board
+    Movement _ from to       -> movePiece from to board
     DoublePawnMove _ from to -> movePiece from to board
-    Capture _ from to -> movePiece from to board
+    Capture _ from to        -> movePiece from to board
     EnPassant _ from@(x1, y1) to@(x2, y2) ->
       movePiece from to (clearBoardSquare board (x1, y2))
     Promotion (Piece color _) from to newType _ -> do
@@ -220,7 +220,7 @@ hasOpponentPiece :: GameState -> Coord -> Bool
 hasOpponentPiece game coord =
   case getPiece (gameBoard game) coord of
     Just (Piece color _) -> color == opponent (currentPlayer game)
-    Nothing -> False
+    Nothing              -> False
 
 
 isKingCaptureMove :: GameState -> Move -> Bool

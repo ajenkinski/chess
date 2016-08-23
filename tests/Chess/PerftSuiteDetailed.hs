@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric, DeriveAnyClass #-}
+
 module Chess.PerftSuiteDetailed where
 {- ^
 This gives test cases, similar to PerftSuite, but in addition to 
@@ -6,15 +8,18 @@ expected statistics for each search depth, such as number of captures,
 en passants, castles, etc.
 -}
 
+import Control.DeepSeq (NFData)
+import GHC.Generics (Generic)
+
 data DepthInfo = DI {
-  numNodes :: Int,
-  numCaptures :: Int,
+  numNodes      :: Int,
+  numCaptures   :: Int,
   numEnPassants :: Int,
-  numCastles :: Int,
+  numCastles    :: Int,
   numPromotions :: Int,
-  numChecks :: Int,
+  numChecks     :: Int,
   numCheckMates :: Int
-  } deriving (Show)
+  } deriving (Eq, Show, Generic, NFData)
 
 type TestCase = (String, [DepthInfo])
 
