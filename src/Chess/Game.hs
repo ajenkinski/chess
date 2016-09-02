@@ -9,7 +9,6 @@ module Chess.Game (
   CastlingType(..),
   GameState(..),
   initialGame,
-  makeGame,
   canCastle,
   makeMove,
   allLegalMoves,
@@ -139,18 +138,6 @@ initialGame startingPlayer =
     whiteCastlingTypes = [QueenSide, KingSide],
     blackCastlingTypes = [QueenSide, KingSide],
     halfMoveClock      = 0
-  }
-
-makeGame :: Board -> PieceColor -> [Move] -> Maybe Coord -> [CastlingType] -> [CastlingType] -> Int -> GameState
-makeGame board player history enPassant whiteCastling blackCastling halfMoves =
-  GameState {
-    gameBoard          = board,
-    currentPlayer      = player,
-    lastMoves          = history,
-    enPassantTarget    = enPassant,
-    whiteCastlingTypes = whiteCastling,
-    blackCastlingTypes = blackCastling,
-    halfMoveClock      = halfMoves
   }
 
 -- | Return a new GameState with move applied. Returns Nothing if there is no piece on the start square, or

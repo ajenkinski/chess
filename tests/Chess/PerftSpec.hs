@@ -34,4 +34,4 @@ testPerft maxDepth (fen, expectedDepthCounts) =
         actualCount `shouldBe` expectedCount
 
 spec :: Spec
-spec = mapM_ (testPerft 6) perftSuite
+spec = parallel $ mapM_ (testPerft 6) perftSuite

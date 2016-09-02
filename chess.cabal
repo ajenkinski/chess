@@ -45,23 +45,13 @@ build-type:          Simple
 -- Constraint on the version of Cabal needed to build this package.
 cabal-version:       >=1.10
 
-
-
-Flag MemProfiling
-  Description: Enable memory profiling
-  Default: False
-  Manual: True
-
 library
-  exposed-modules: Chess.Game, Chess.Piece, Chess.Board, Chess.FEN
+  exposed-modules: Chess.Game, Chess.Piece, Chess.Board, Chess.FEN, Chess.Perft
   build-depends: base, array, text, split, containers, deepseq, parallel
   hs-source-dirs: src
   default-language:    Haskell2010
   ghc-options: -O
-  other-extensions: DeriveGeneric, DeriveAnyClass
-  if flag(MemProfiling)
-    ghc-options:
-      -fprof-auto
+  other-extensions: DeriveGeneric, DeriveAnyClass, FlexibleInstances
 
 executable chess-test
   main-is:             Main.hs
@@ -82,12 +72,6 @@ executable chess-test
   default-language:    Haskell2010
 
   ghc-options: -O -threaded
-
-  if flag(MemProfiling)
-    ghc-options:
-      -fprof-auto
-      "-with-rtsopts=-hd"
-
 
 
 executable perft
@@ -117,9 +101,4 @@ test-suite chess-tests
   build-depends: chess, base, array, text, split, containers, hspec, parallel, deepseq
   default-language: Haskell2010
   ghc-options: -O -threaded
-  if flag(MemProfiling)
-    ghc-options:
-      -fprof-auto
-      "-with-rtsopts=-hd"
-
 

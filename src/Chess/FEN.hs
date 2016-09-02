@@ -24,13 +24,19 @@ parseFEN fen =
       (blackCastling, whiteCastling) = parseCastling castlingS
       enPassant = parseEnPassant enPassantS
       halfMoves = read halfMoveS
-  in makeGame board player [] enPassant whiteCastling blackCastling halfMoves
+  in GameState { gameBoard          = board,
+                 currentPlayer      = player,
+                 lastMoves          = [],
+                 enPassantTarget    = enPassant,
+                 whiteCastlingTypes = whiteCastling,
+                 blackCastlingTypes = blackCastling,
+                 halfMoveClock      = halfMoves
+               }
   where parseRank = concatMap parseRankChar
         parseRankChar char
           | Char.isAlpha char = [Square (Data.Maybe.fromJust (charToPiece char))]
           | Char.isDigit char = replicate (Char.digitToInt char) Empty
-          | otherwise = error "Unexpected character in FEN pieces string"
-
+          | otherwise         = error "Unexpected character in FEN pieces string"
         parseCastling castlingString =
           if castlingString == "-" then ([], [])
           else

@@ -68,5 +68,5 @@ testPerft maxDepth (fen, expectedDepthInfos) =
         perft depth start `shouldBe` expectedInfo
 
 spec :: Spec
-spec = mapM_ (testPerft 5) testCases
+spec = parallel $ mapM_ (testPerft 5) testCases
 
