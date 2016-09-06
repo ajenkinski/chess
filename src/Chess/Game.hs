@@ -290,7 +290,7 @@ sumSquares (r1, c1) (r2, c2) = (r1 + r2, c1 + c2)
 
 -- | Return move of a piece by the amount specified by the direction argument.
 -- Only makes the move if the destination square is in bounds, and is Empty
--- or contains a capture-able opponent piee.  Meant to be used to advance any
+-- or contains a capture-able opponent piece.  Meant to be used to advance any
 -- piece other than pawns by one unit of movment.
 maybeMoveInDirection :: GameState -> Piece -> Coord -> Coord -> Maybe Move
 maybeMoveInDirection game piece from direction =
