@@ -305,12 +305,12 @@ maybeMoveInDirection game piece from direction =
 -- | Repeatedly applies maybeMoveInDirection until encountering the board edge, a capture, or a
 -- friendly piece, and returns the list of moves along the way.
 movesInDirection :: GameState -> Piece -> Coord -> Coord -> [Move]
-movesInDirection game piece from direction =
-  unfoldr (\dir' -> do move <- maybeMoveInDirection game piece from dir'
-                       case move of
-                         Capture{} -> Just (move, (9, 9))
-                         _ -> Just (move, sumSquares dir' direction))
-          direction
+movesInDirection game piece from direction = movesInDirection' game piece from direction direction 
+  where movesInDirection' game piece from direction increment =
+          case maybeMoveInDirection game piece from increment of
+            Just move@Capture{} -> [move]
+            Just move           -> move : movesInDirection' game piece from direction (sumSquares increment direction)
+            Nothing             -> []
 
 -- | Return true if the 'count' squares from 'start' in 'direction' are empty
 squaresAreEmpty :: GameState -> Coord -> Coord -> Int -> Bool
